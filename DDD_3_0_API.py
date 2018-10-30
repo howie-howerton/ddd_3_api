@@ -26,14 +26,13 @@ text - Content of the response, in unicode.
 For example:
 
 response = c.get_black_lists(last_query_id=0)
-blacklist_xml = response.text 
-# Note: get_black_lists returns data as an XML string.
+blacklist_json_string = response.text 
+# Note: get_black_lists returns data as a JSON string.
 
                  
 '''
 
-import time, hashlib, uuid, platform, re, os, socket, datetime
-import requests
+import time, hashlib, uuid, platform, re, datetime, requests
 
 class Client():
     '''A client object for interacting with DDD's API.'''
@@ -62,6 +61,7 @@ class Client():
             requests.packages.urllib3.disable_warnings() # To disable warning for Self-Signed Certificates
         self.register()
 
+
     def calculate_checksum(self, headers):
         '''Calculate the header checksum used for authentication.'''
         #TODO: Extend method to handle use_checksum_calculating_order property == False
@@ -73,65 +73,24 @@ class Client():
             x_ddd_checksum = hashlib.sha1(self.api_key + x_ddd_checksumcalculatingorder).hexdigest()
             return x_ddd_checksum
 
-    def calculate_checksum2(self, headers, data):
-        '''Calculate the header checksum used for authentication (headers + body).'''
-        #TODO: Extend method to handle use_checksum_calculating_order property == False
-        if self.use_checksum_calculating_order == True:
-            x_ddd_checksumcalculatingorder_list = headers['X-DDD-ChecksumCalculatingOrder'].split(",")
-            x_ddd_checksumcalculatingorder = ""
-            for i in x_ddd_checksumcalculatingorder_list:
-                x_ddd_checksumcalculatingorder += headers[i]
-            x_ddd_checksum = hashlib.sha1(self.api_key + x_ddd_checksumcalculatingorder + data).hexdigest()
-            return x_ddd_checksum
 
     def get_challenge(self):
         '''Get the unique challenge UUID value for the Challenge header.'''
         challenge = str(uuid.uuid4())
         return challenge
 
+
     def get_epoch_time(self):
         '''Get the epoch time (for the X-DDD-Time header value.'''
         epoch_time = str(int(time.time()))
         return epoch_time
 
-    def get_epoch_from_datetime(self, dt):
-        '''Calculate epoch time from a datatime object'''
-        epoch_format = str(int(time.mktime(dt.timetuple())))
-        return epoch_format
 
     def get_system_hostname(self):
         '''Get the hostname of the system from which the script is being run'''
         hostname = platform.node()
         return hostname
     
-    def hash_file(self, filename):
-        '''Calculate the SHA1 of a file'''
-        h = hashlib.sha1()
-        with open(filename,'rb') as file:
-            chunk = 0
-            while chunk != b'':
-                chunk = file.read(1024)
-                h.update(chunk)
-        return h.hexdigest()    
-
-    def hash_url(self, url):
-        '''Calculate the SHA1 of a URL'''
-        h = hashlib.sha1()
-        h.update(url)
-        return h.hexdigest()
-
-    def is_valid_url(self, url):
-        import re
-        regex = re.compile(
-            r'^https?://'  # http:// or https://
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
-            r'(?::\d{1,5})?'  # optional port
-            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-        if url is not None and regex.search(url):
-            return True
-        else:
-            return False
 
     def is_valid_ip(self, address):
         try: 
@@ -140,12 +99,14 @@ class Client():
         except:
             return False    
 
+
     def is_valid_hostname(self, hostname):
         # TODO: Make a better regex
         if re.match("^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$", hostname):
             return True
         else:
             return False  
+
 
     def test_connection(self):
         '''Issue a request to make sure that all settings are correct and the connection to DDD's API is good.'''
@@ -161,6 +122,7 @@ class Client():
         headers["X-DDD-Checksum"] = self.calculate_checksum(headers)
         r = requests.get(url, verify=False, headers=headers)
         return r
+
 
     def register(self):
         '''Send a registration request to register or update registration information on ddd.'''
@@ -185,6 +147,7 @@ class Client():
         r = requests.get(url, verify=False, headers=headers)
         return r
 
+
     def unregister(self):
         '''Send an unregister request to remove client registration information from DDD.'''
         url = "https://{ddd_ip}/web_service/{service}".format(ddd_ip=self.ddd_ip,
@@ -201,6 +164,7 @@ class Client():
         headers["X-DDD-Checksum"] = self.calculate_checksum(headers)
         r = requests.get(url, verify=False, headers=headers)
         return r
+
 
     def get_black_lists(self, last_query_id=0):
         '''Issue a request to retrieve all blacklist information'''
